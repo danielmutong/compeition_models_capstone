@@ -2,41 +2,47 @@ import torch.nn as nn
 
 import torch
 import torch.nn.functional as F
+import torchvision
 
 #hard coded functions of conv_layer(in_channels, out_channels, kernel_size, stride=1, dilation=1, groups=1):
 
 #this function is hardcoded on line 188
 def conv_layerdc():
-    return nn.Conv2d(50, 25, 1, 1, 0, True, 1,1)
+    return nn.Conv2d(50, 25, 1, 1, padding=0, bias = True, dilation = 1, groups = 1)
 
 def conv_layerrc():
-    return nn.Conv2d(50, 50, 3, 1, 1, True, 1,1)
+    return nn.Conv2d(50, 50, 3, 1, padding = 1, bias = True, dilation = 1, groups = 1)
+
+def conv_layerc4():
+    return nn.Conv2d(50, 25, 3, 1, padding = 1, bias = True, dilation = 1, groups = 1)
 
 def conv_layer_fea_conv():
-    return nn.Conv2d(3, 50, 3, 1, 1, True, 1, 1)
+    return nn.Conv2d(3, 50, 3, 1, padding = 1, bias = True, dilation = 1, groups = 1)
 
 def conv_layer_LR_conv():
-    return nn.Conv2d(50, 50, 3, 1, 1, True, 1, 1)
+    return nn.Conv2d(50, 50, 3, 1, padding = 1, bias = True, dilation = 1, groups = 1)
 
 def conv_layerc5():
-    return nn.Conv2d(100, 50, 1, 1, 0, True, 1,1)
+    return nn.Conv2d(100, 50, 1, 1, padding = 0, bias = True, dilation = 1, groups = 1)
 
 
 def conv_layer_p():
-    return nn.Conv2d(50, 48, 3, 1, 1, True, 1, 1)
+    return nn.Conv2d(50, 48, 3, 1, padding = 1, bias = True, dilation = 1, groups = 1)
 
-#def conv_block():
-#    act_type='lrelu'
-#    pad_type='zero'
-#    norm_type=None
-#    padding = get_valid_padding(1, 1)
-#    p = pad(pad_type, padding) if pad_type and pad_type != 'zero' else None
-#    padding = padding if pad_type == 'zero' else 0
 
-#    c = nn.Conv2d(200, 50, 1, 1, 0, 1, True, 1)
-#    a = activation(act_type) if act_type else None
-#    n = norm(norm_type, 50) if norm_type else None
-#    return sequential(p, c, n, a)
+
+def conv_block():
+    act_type='lrelu'
+    pad_type='zero'
+    norm_type=None
+    padding = get_valid_padding(1, 1)
+    p = pad(pad_type, padding) if pad_type and pad_type != 'zero' else None
+    padding = padding if pad_type == 'zero' else 0
+
+    c = nn.Conv2d(200, 50, 1, 1, padding = 0, dilation = 1, bias = True, groups = 1)
+    a = activation(act_type) if act_type else None
+    n = norm(norm_type, 50) if norm_type else None
+    return sequential(p, c, n, a)
 
 #    def __init__(self, conv):
 #        super(ESA, self).__init__()
@@ -88,19 +94,6 @@ def get_valid_padding(kernel_size, dilation):
     return padding
 
 
-def conv_block(in_nc, out_nc, kernel_size, stride=1, dilation=1, groups=1, bias=True,
-               pad_type='zero', norm_type=None, act_type='relu'):
-    padding = get_valid_padding(kernel_size, dilation)
-    p = pad(pad_type, padding) if pad_type and pad_type != 'zero' else None
-    padding = padding if pad_type == 'zero' else 0
-
-    c = nn.Conv2d(in_nc, out_nc, kernel_size=kernel_size, stride=stride, padding=padding,
-                  dilation=dilation, bias=bias, groups=groups)
-    a = activation(act_type) if act_type else None
-    n = norm(norm_type, out_nc) if norm_type else None
-    return sequential(p, c, n, a)
-
-
 def activation(act_type, inplace=True, neg_slope=0.05, n_prelu=1):
     act_type = act_type.lower()
     if act_type == 'relu':
@@ -126,12 +119,12 @@ class ShortcutBlock(nn.Module):
 def mean_channels(F):
     assert(F.dim() == 4)
     spatial_sum = F.sum(3, keepdim=True).sum(2, keepdim=True)
-    return spatial_sum / (F.size(2) * F.size(3))
+    return spatial_sum / (744 * 1296)
 
 def stdv_channels(F):
     assert(F.dim() == 4)
     F_mean = mean_channels(F)
-    F_variance = (F - F_mean).pow(2).sum(3, keepdim=True).sum(2, keepdim=True) / (F.size(2) * F.size(3))
+    F_variance = (F - F_mean).pow(2).sum(3, keepdim=True).sum(2, keepdim=True) / (744 * 1296)
     return F_variance.pow(0.5)
 
 def sequential(*args):
@@ -149,16 +142,17 @@ def sequential(*args):
     return nn.Sequential(*modules)
 
 class ESA(nn.Module):
-    def __init__(self, n_feats, conv):
+    def __init__(self):
         super(ESA, self).__init__()
-        f = n_feats // 4
-        self.conv1 = conv(n_feats, f, kernel_size=1)
-        self.conv_f = conv(f, f, kernel_size=1)
-        self.conv_max = conv(f, f, kernel_size=3, padding=1)
-        self.conv2 = conv(f, f, kernel_size=3, stride=2, padding=0)
-        self.conv3 = conv(f, f, kernel_size=3, padding=1)
-        self.conv3_ = conv(f, f, kernel_size=3, padding=1)
-        self.conv4 = conv(f, n_feats, kernel_size=1)
+        conv = nn.Conv2d
+        f = 50 // 4
+        self.conv1 = conv(50, 12, 1)
+        self.conv_f = conv(12, 12, 1)
+        self.conv_max = conv(12, 12, 3, 1)
+        self.conv2 = conv(12, 12, 3, 2, 0)
+        self.conv3 = conv(12, 12, 3, 1)
+        self.conv3_ = conv(12, 12, 3, 1)
+        self.conv4 = conv(12, 50, 1)
         self.sigmoid = nn.Sigmoid()
         self.relu = nn.ReLU(inplace=True)
 
@@ -169,16 +163,19 @@ class ESA(nn.Module):
         v_range = self.relu(self.conv_max(v_max))
         c3 = self.relu(self.conv3(v_range))
         c3 = self.conv3_(c3)
-        c3 = F.interpolate(c3, (x.size(2), x.size(3)), mode='bilinear', align_corners=False) 
+
+        c3 = F.interpolate(c3, (744, 1296), mode='bilinear', align_corners=False) 
+
         cf = self.conv_f(c1_)
         c4 = self.conv4(c3+cf)
+        #c4 = self.conv4(cf)
         m = self.sigmoid(c4)
         
         return x * m
 
 
 class RFDB(nn.Module):
-    def __init__(self, in_channels, distillation_rate=0.25):
+    def __init__(self, distillation_rate=0.25):
         super(RFDB, self).__init__()
         in_channels = 50
         self.dc = self.distilled_channels = in_channels//2
@@ -187,33 +184,26 @@ class RFDB(nn.Module):
         #implemented a hardcoded conv_layer, changing this back to orignal conv_layer function will run with no problems
         self.c1_d = conv_layerdc()
         
-        self.c1_r = conv_layer(self.remaining_channels, self.rc, 3)
-        self.c2_d = conv_layer(in_channels, self.dc, 1)
-        self.c2_r = conv_layer(self.remaining_channels, self.rc, 3)
-        self.c3_d = conv_layer(in_channels, self.dc, 1)
-        self.c3_r = conv_layer(self.remaining_channels, self.rc, 3)
-        self.c4 = conv_layer(self.remaining_channels, self.dc, 3)
-        self.act = activation('lrelu', neg_slope=0.05)
-        self.c5 = conv_layer(self.dc*4, in_channels, 1)
-        self.esa = ESA(in_channels, nn.Conv2d)
+        self.c1_r = conv_layerrc()
+        self.c2_d = conv_layerdc()
+        self.c2_r = conv_layerrc()
+        self.c3_d = conv_layerdc()
+        self.c3_r = conv_layerrc()
+        self.c4 = conv_layerc4()
+        self.act = nn.LeakyReLU(0.05, True)
+        
+        self.c5 = conv_layerc5()
+        self.esa = ESA()
 
     def forward(self, input):
-        print("forward")
-        print(type(self.c1_d))
-        print(type(self.c1_r))
+
         distilled_c1 = self.act(self.c1_d(input))
-        print("1")
-        print(type(self.c1_r(input)))
+
         r_c1 = (self.c1_r(input))
-        print("2")
         r_c1 = self.act(r_c1+input)
-        print("3")
         distilled_c2 = self.act(self.c2_d(r_c1))
-        print("4")
         r_c2 = (self.c2_r(r_c1))
-        print("5")
         r_c2 = self.act(r_c2+r_c1)
-        print("6")
         distilled_c3 = self.act(self.c3_d(r_c2))
         r_c3 = (self.c3_r(r_c2))
         r_c3 = self.act(r_c3+r_c2)
@@ -227,7 +217,7 @@ class RFDB(nn.Module):
 
 
 
-def pixelshuffle_block(in_channels, out_channels, upscale_factor=2, kernel_size=3, stride=1):
-    conv = conv_layer(in_channels, out_channels * (upscale_factor ** 2), kernel_size, stride)
-    pixel_shuffle = nn.PixelShuffle(upscale_factor)
-    return sequential(conv, pixel_shuffle)
+def pixelshuffle_block():
+    conv = conv_layer_p()
+    pixel_shuffle = nn.PixelShuffle(4)
+    return sequential(conv, 4)

@@ -11,18 +11,18 @@ class RFDN(nn.Module):
     def __init__(self, upscale=4):
         super(RFDN, self).__init__()
 
-        self.fea_conv = B.conv_layer(3, 50, kernel_size=3)
+        self.fea_conv = B.conv_layer_fea_conv()
 
-        self.B1 = B.RFDB(50)
-        self.B2 = B.RFDB(50)
-        self.B3 = B.RFDB(50)
-        self.B4 = B.RFDB(50)
-        self.c = B.conv_block(50 * 4, 50, kernel_size=1, act_type='lrelu')
+        self.B1 = B.RFDB()
+        self.B2 = B.RFDB()
+        self.B3 = B.RFDB()
+        self.B4 = B.RFDB()
+        self.c = B.conv_block()
 
-        self.LR_conv = B.conv_layer(50, 50, kernel_size=3)
+        self.LR_conv = B.conv_layer_LR_conv()
 
         upsample_block = B.pixelshuffle_block
-        self.upsampler = upsample_block(50, 3, upscale_factor=4)
+        self.upsampler = upsample_block()
         self.scale_idx = 0
 
 
